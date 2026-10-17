@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" fill="none">
+<rect width="1200" height="620" rx="28" fill="#F7F2E7"/>
+<circle cx="1000" cy="105" r="120" fill="#B9E3D5"/>
+<circle cx="170" cy="520" r="180" fill="#F7C978" fill-opacity=".45"/>
+<path d="M90 470C250 410 360 450 510 390C650 335 760 365 880 300C985 243 1050 275 1130 225" stroke="#E96D4C" stroke-width="5" stroke-linecap="round" stroke-dasharray="10 16"/>
+<text x="70" y="90" fill="#092F33" font-family="Arial,sans-serif" font-size="23" font-weight="700">ONE RULE, ANY CAUSE</text>
+<g transform="translate(70 135)">
+<rect width="300" height="215" rx="22" fill="#092F33"/>
+<rect x="24" y="24" width="252" height="44" rx="10" fill="#E96D4C"/>
+<text x="42" y="54" fill="#F7F2E7" font-family="Arial,sans-serif" font-size="19" font-weight="700">EDUCATION</text>
+<text x="24" y="112" fill="#F7F2E7" font-family="Arial,sans-serif" font-size="17">Study supplies</text>
+<text x="24" y="140" fill="#B9E3D5" font-family="Arial,sans-serif" font-size="15">Delivery receipt</text>
+<text x="24" y="190" fill="#F7C978" font-family="Arial,sans-serif" font-size="26" font-weight="700">1 USDC / item</text>
+</g>
+<g transform="translate(450 175)">
+<rect width="300" height="215" rx="22" fill="#092F33"/>
+<rect x="24" y="24" width="252" height="44" rx="10" fill="#F7C978"/>
+<text x="42" y="54" fill="#092F33" font-family="Arial,sans-serif" font-size="19" font-weight="700">ELDERLY CARE</text>
+<text x="24" y="112" fill="#F7F2E7" font-family="Arial,sans-serif" font-size="17">Hot meals</text>
+<text x="24" y="140" fill="#B9E3D5" font-family="Arial,sans-serif" font-size="15">Service record</text>
+<text x="24" y="190" fill="#F7C978" font-family="Arial,sans-serif" font-size="26" font-weight="700">5% of sales</text>
+</g>
+<g transform="translate(830 215)">
+<rect width="300" height="215" rx="22" fill="#092F33"/>
+<rect x="24" y="24" width="252" height="44" rx="10" fill="#B9E3D5"/>
+<text x="42" y="54" fill="#092F33" font-family="Arial,sans-serif" font-size="19" font-weight="700">DISASTER RELIEF</text>
+<text x="24" y="112" fill="#F7F2E7" font-family="Arial,sans-serif" font-size="17">Emergency supplies</text>
+<text x="24" y="140" fill="#B9E3D5" font-family="Arial,sans-serif" font-size="15">Procurement invoice</text>
+<text x="24" y="190" fill="#F7C978" font-family="Arial,sans-serif" font-size="26" font-weight="700">2 USDC / bag</text>
+</g>
+<text x="70" y="560" fill="#3B5F63" font-family="Arial,sans-serif" font-size="17">Merchants choose the cause. The contract enforces the split. Evidence closes the loop.</text>
+</svg>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" fill="none">
+<rect width="1200" height="620" rx="28" fill="#092F33"/>
+<rect x="80" y="72" width="1040" height="476" rx="20" fill="#103F40" stroke="#397B70" stroke-width="2"/>
+<text x="120" y="132" fill="#F7F2E7" font-family="Arial,sans-serif" font-size="24" font-weight="700">SCHOOL KIT IMPACT / 001</text>
+<text x="120" y="174" fill="#B9E3D5" font-family="Arial,sans-serif" font-size="16">Singapore Community Education Support - TESTNET</text>
+<g fill="#F7F2E7"><rect x="120" y="225" width="270" height="92" rx="12"/><rect x="420" y="225" width="270" height="92" rx="12"/><rect x="720" y="225" width="270" height="92" rx="12"/></g>
+<g fill="#092F33" font-family="Arial,sans-serif"><text x="145" y="260" font-size="30" font-weight="700">10</text><text x="145" y="291" font-size="15">verified purchases</text><text x="445" y="260" font-size="30" font-weight="700">10 USDC</text><text x="445" y="291" font-size="15">learning-kit fund</text><text x="745" y="260" font-size="30" font-weight="700">10</text><text x="745" y="291" font-size="15">kits delivered</text></g>
+<path d="M125 405H1020" stroke="#397B70" stroke-width="3"/><path d="M125 405L310 405L420 365L570 405L690 330L830 405L1015 285" stroke="#F7C978" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+<g fill="#E96D4C"><circle cx="310" cy="405" r="8"/><circle cx="420" cy="365" r="8"/><circle cx="570" cy="405" r="8"/><circle cx="690" cy="330" r="8"/><circle cx="830" cy="405" r="8"/><circle cx="1015" cy="285" r="8"/></g>
+<text x="120" y="490" fill="#B9E3D5" font-family="Arial,sans-serif" font-size="16">TX 0x7b...a91</text><text x="900" y="490" fill="#F7C978" font-family="Arial,sans-serif" font-size="16">VERIFIED</text>
+</svg>

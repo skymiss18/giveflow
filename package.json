@@ -1,0 +1,10 @@
+{
+  "name": "shanliu-visible",
+  "private": true,
+  "packageManager": "pnpm@12.11.2",
+  "scripts": {
+    "sync-abi": "node scripts/sync-abi.mjs",
+    "web": "pnpm --filter web",
+    "contracts:test": "cd contracts && forge test"
+  }
+}

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" fill="none">
+<rect width="1600" height="900" fill="#092F33"/>
+<circle cx="1260" cy="120" r="250" fill="#E96D4C" fill-opacity=".16"/>
+<circle cx="220" cy="770" r="300" fill="#B9E3D5" fill-opacity=".08"/>
+<path d="M-50 690C190 480 270 560 470 390C690 203 835 300 1010 175C1160 68 1275 105 1660 -75" stroke="#F7C978" stroke-width="3" stroke-opacity=".85"/>
+<path d="M-40 790C210 595 345 650 535 500C730 345 820 433 1030 300C1240 168 1320 255 1650 70" stroke="#E96D4C" stroke-width="4" stroke-opacity=".8"/>
+<path d="M-20 550C190 395 330 430 510 280C710 115 820 220 1020 70C1230 -80 1410 0 1660 -100" stroke="#B9E3D5" stroke-width="2" stroke-opacity=".7"/>
+<g fill="#F7F2E7" stroke="#092F33" stroke-width="10">
+<circle cx="224" cy="612" r="27"/><circle cx="520" cy="398" r="27"/><circle cx="815" cy="320" r="27"/><circle cx="1050" cy="150" r="27"/><circle cx="1295" cy="197" r="27"/>
+</g>
+<g fill="#F7C978"><circle cx="224" cy="612" r="8"/><circle cx="520" cy="398" r="8"/><circle cx="815" cy="320" r="8"/><circle cx="1050" cy="150" r="8"/><circle cx="1295" cy="197" r="8"/></g>
+<g transform="translate(1090 455) rotate(-8)">
+<rect x="0" y="0" width="330" height="210" rx="24" fill="#F7F2E7"/>
+<rect x="28" y="35" width="92" height="12" rx="6" fill="#E96D4C"/>
+<rect x="28" y="68" width="220" height="9" rx="4" fill="#B9E3D5"/>
+<rect x="28" y="92" width="174" height="9" rx="4" fill="#B9E3D5"/>
+<circle cx="267" cy="53" r="22" fill="#F7C978"/>
+<path d="M38 156H290" stroke="#092F33" stroke-width="5" stroke-linecap="round" stroke-dasharray="8 12"/>
+<text x="28" y="188" fill="#092F33" font-family="Arial,sans-serif" font-size="18" font-weight="700">PURCHASE  →  PROOF</text>
+</g>
+</svg>

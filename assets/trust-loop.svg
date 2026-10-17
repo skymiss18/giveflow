@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" fill="none">
+<rect width="1200" height="620" rx="28" fill="#F7F2E7"/>
+<circle cx="600" cy="310" r="170" stroke="#092F33" stroke-width="2" stroke-dasharray="8 12"/>
+<circle cx="600" cy="310" r="82" fill="#092F33"/>
+<text x="600" y="300" text-anchor="middle" fill="#F7F2E7" font-family="Arial,sans-serif" font-size="24" font-weight="700">ONE</text>
+<text x="600" y="332" text-anchor="middle" fill="#F7C978" font-family="Arial,sans-serif" font-size="24" font-weight="700">TRACE</text>
+<g stroke="#E96D4C" stroke-width="5" stroke-linecap="round">
+<path d="M600 140V90"/><path d="M770 310H850"/><path d="M600 480V530"/><path d="M430 310H350"/>
+</g>
+<g fill="#092F33" font-family="Arial,sans-serif" text-anchor="middle">
+<text x="600" y="62" font-size="24" font-weight="700">PURCHASE</text><text x="600" y="88" font-size="16" fill="#397B70">product and rule</text>
+<text x="930" y="306" font-size="24" font-weight="700">SPLIT</text><text x="930" y="332" font-size="16" fill="#397B70">smart contract</text>
+<text x="600" y="570" font-size="24" font-weight="700">DELIVER</text><text x="600" y="596" font-size="16" fill="#397B70">evidence and verify</text>
+<text x="270" y="306" font-size="24" font-weight="700">PUBLIC</text><text x="270" y="332" font-size="16" fill="#397B70">on-chain status</text>
+</g>
+<g fill="#F7C978" stroke="#092F33" stroke-width="8"><circle cx="600" cy="90" r="15"/><circle cx="850" cy="310" r="15"/><circle cx="600" cy="530" r="15"/><circle cx="350" cy="310" r="15"/></g>
+</svg>
