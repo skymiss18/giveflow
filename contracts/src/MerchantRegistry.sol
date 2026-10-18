@@ -16,9 +16,11 @@ contract MerchantRegistry is AccessControl {
         Status status;
         address receiver;
         bytes32 metadataHash;
+        uint64 appliedAt;
     }
 
     mapping(address => Merchant) private _merchants;
+    address[] private _applicants;
 
     event MerchantApplied(address indexed wallet, address receiver, bytes32 metadataHash);
     event MerchantApproved(address indexed wallet, address receiver, bytes32 metadataHash);
@@ -35,9 +37,11 @@ contract MerchantRegistry is AccessControl {
         if (receiver == address(0)) revert InvalidReceiver();
         Merchant storage m = _merchants[msg.sender];
         if (m.status != Status.None && m.status != Status.Rejected) revert InvalidState();
+        if (m.status == Status.None) _applicants.push(msg.sender);
         m.status = Status.Pending;
         m.receiver = receiver;
         m.metadataHash = metadataHash;
+        m.appliedAt = uint64(block.timestamp);
         emit MerchantApplied(msg.sender, receiver, metadataHash);
         emit MerchantStatusChanged(msg.sender, Status.Pending);
     }
@@ -70,5 +74,21 @@ contract MerchantRegistry is AccessControl {
 
     function getMerchant(address wallet) external view returns (Merchant memory) {
         return _merchants[wallet];
+    }
+
+    function applicantCount() external view returns (uint256) {
+        return _applicants.length;
+    }
+
+    /// @notice Wallets in first-application order; returns fewer than `limit` entries at the end of the list.
+    function getApplicants(uint256 offset, uint256 limit) external view returns (address[] memory page) {
+        uint256 total = _applicants.length;
+        if (offset >= total) return page;
+        uint256 n = total - offset;
+        if (limit < n) n = limit;
+        page = new address[](n);
+        for (uint256 i = 0; i < n; i++) {
+            page[i] = _applicants[offset + i];
+        }
     }
 }

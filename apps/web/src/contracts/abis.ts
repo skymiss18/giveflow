@@ -631,6 +631,19 @@ export const merchantRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "applicantCount",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "applyAsMerchant",
     "inputs": [
       {
@@ -662,6 +675,30 @@ export const merchantRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "getApplicants",
+    "inputs": [
+      {
+        "name": "offset",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "limit",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "page",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getMerchant",
     "inputs": [
       {
@@ -690,6 +727,11 @@ export const merchantRegistryAbi = [
             "name": "metadataHash",
             "type": "bytes32",
             "internalType": "bytes32"
+          },
+          {
+            "name": "appliedAt",
+            "type": "uint64",
+            "internalType": "uint64"
           }
         ]
       }

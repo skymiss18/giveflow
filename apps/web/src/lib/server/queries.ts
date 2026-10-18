@@ -244,10 +244,50 @@ export async function getCampaign(id: string): Promise<CampaignView | null> {
 
 /* ------------------------------ parties ----------------------------- */
 
+const APPLICANT_PAGE = 100n;
+
+// Merchants are read from the registry's own applicant list, so no event-log scan is needed.
+async function getMerchantParties(wallet?: string): Promise<PartyView[]> {
+  const dep = getDeployment();
+  let wallets: Hex[];
+  if (wallet) {
+    wallets = [wallet as Hex];
+  } else {
+    const total = await publicClient.readContract({ address: dep.MerchantRegistry, abi: merchantRegistryAbi, functionName: "applicantCount" });
+    wallets = [];
+    for (let offset = 0n; offset < total; offset += APPLICANT_PAGE) {
+      const page = await publicClient.readContract({
+        address: dep.MerchantRegistry,
+        abi: merchantRegistryAbi,
+        functionName: "getApplicants",
+        args: [offset, APPLICANT_PAGE],
+      });
+      wallets.push(...page);
+    }
+  }
+
+  const views: PartyView[] = [];
+  const merchants = await Promise.all(wallets.map((w) => readMerchant(w)));
+  merchants.forEach((m, i) => {
+    if (Number(m.status) === 0) return;
+    views.push({
+      wallet: wallets[i],
+      kind: "merchant",
+      status: MERCHANT_STATUS[Number(m.status)],
+      metadataHash: m.metadataHash,
+      receiver: m.receiver === ZERO ? null : m.receiver,
+      meta: loadMetadata<MerchantProfileMeta>(m.metadataHash),
+      appliedAt: Number(m.appliedAt),
+    });
+  });
+  return views.sort((a, b) => b.appliedAt - a.appliedAt);
+}
+
 export async function getParties(kind: "merchant" | "charity", wallet?: string): Promise<PartyView[]> {
+  if (kind === "merchant") return getMerchantParties(wallet);
   await ensureSynced();
   const applied = queryEvents({
-    names: [kind === "merchant" ? "MerchantApplied" : "CharityApplied"],
+    names: ["CharityApplied"],
     where: wallet ? { wallet } : {},
   });
   const first = new Map<string, EventRow>();
@@ -256,29 +296,16 @@ export async function getParties(kind: "merchant" | "charity", wallet?: string):
   const views: PartyView[] = [];
   for (const [, e] of first) {
     const w = e.args.wallet as Hex;
-    if (kind === "merchant") {
-      const m = await readMerchant(w);
-      views.push({
-        wallet: w,
-        kind,
-        status: MERCHANT_STATUS[Number(m.status)],
-        metadataHash: m.metadataHash,
-        receiver: m.receiver === ZERO ? null : m.receiver,
-        meta: loadMetadata<MerchantProfileMeta>(m.metadataHash),
-        appliedAt: e.timestamp,
-      });
-    } else {
-      const c = await readCharity(w);
-      views.push({
-        wallet: w,
-        kind,
-        status: CHARITY_STATUS[Number(c.status)],
-        metadataHash: c.metadataHash,
-        receiver: null,
-        meta: loadMetadata<CharityProfileMeta>(c.metadataHash),
-        appliedAt: e.timestamp,
-      });
-    }
+    const c = await readCharity(w);
+    views.push({
+      wallet: w,
+      kind: "charity",
+      status: CHARITY_STATUS[Number(c.status)],
+      metadataHash: c.metadataHash,
+      receiver: null,
+      meta: loadMetadata<CharityProfileMeta>(c.metadataHash),
+      appliedAt: e.timestamp,
+    });
   }
   return views.sort((a, b) => b.appliedAt - a.appliedAt);
 }

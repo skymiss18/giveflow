@@ -208,6 +208,36 @@ contract RegistriesTest is Base {
         merchants.approve(stranger);
     }
 
+    function test_merchantApplicantListIsPaginatedAndDeduplicated() public {
+        address m2 = makeAddr("list2");
+        address m3 = makeAddr("list3");
+        assertEq(merchants.applicantCount(), 1);
+
+        vm.prank(m2);
+        merchants.applyAsMerchant(m2, bytes32(uint256(1)));
+        vm.prank(admin);
+        merchants.reject(m2);
+        vm.warp(block.timestamp + 1 days);
+        vm.prank(m2);
+        merchants.applyAsMerchant(m2, bytes32(uint256(2)));
+        vm.prank(m3);
+        merchants.applyAsMerchant(m3, bytes32(uint256(3)));
+
+        assertEq(merchants.applicantCount(), 3);
+        assertEq(merchants.getMerchant(m2).appliedAt, block.timestamp);
+
+        address[] memory first = merchants.getApplicants(0, 2);
+        assertEq(first.length, 2);
+        assertEq(first[0], merchant);
+        assertEq(first[1], m2);
+
+        address[] memory rest = merchants.getApplicants(2, 10);
+        assertEq(rest.length, 1);
+        assertEq(rest[0], m3);
+        assertEq(merchants.getApplicants(3, 10).length, 0);
+        assertEq(merchants.getApplicants(0, 0).length, 0);
+    }
+
     function test_charityLifecycleAndProjects() public {
         assertTrue(charities.isProjectActive(projectId));
 
