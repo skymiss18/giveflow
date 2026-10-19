@@ -113,12 +113,24 @@ function requestIp(req: Request): string {
   return req.headers.get("x-real-ip")?.trim() || forwarded || "unknown";
 }
 
+// Next.js builds req.url from the server's listen address, not the browser's, so compare against the Host header instead.
+function isSameOrigin(req: Request): boolean {
+  const origin = req.headers.get("origin");
+  if (!origin) return true;
+  let originHost: string;
+  try {
+    originHost = new URL(origin).host;
+  } catch {
+    return false;
+  }
+  const host = (req.headers.get("x-forwarded-host") ?? req.headers.get("host"))?.split(",")[0]?.trim();
+  return originHost === host;
+}
+
 export async function relayCheckout(req: Request, raw: unknown) {
   const key = process.env.RELAYER_PRIVATE_KEY;
   if (!key || !/^0x[0-9a-fA-F]{64}$/.test(key)) throw new HttpError(503, "Checkout relayer is not configured");
-  if (req.headers.get("origin") && req.headers.get("origin") !== new URL(req.url).origin) {
-    throw new HttpError(403, "Cross-origin relay requests are not allowed");
-  }
+  if (!isSameOrigin(req)) throw new HttpError(403, "Cross-origin relay requests are not allowed");
   const input = parseInput(raw);
   enforceAllowlist(input);
   const current = Math.floor(Date.now() / 1000);
