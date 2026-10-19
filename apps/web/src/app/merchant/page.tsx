@@ -31,6 +31,11 @@ import {
   TxStatus,
 } from "@/components/ui";
 
+function randomProductNonce(): string {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 export default function MerchantPage() {
   const { t } = useI18n();
   return (
@@ -222,7 +227,7 @@ function ProductForm({ address, base, onDone }: { address: `0x${string}`; base: 
         data: { name, description, ...(imageUrl ? { imageUrl } : {}) },
       });
       const now = Math.floor(Date.now() / 1000);
-      const productId = base?.productId ?? keccak256(toBytes(`${address.toLowerCase()}:${name}:${crypto.randomUUID()}`));
+      const productId = base?.productId ?? keccak256(toBytes(`${address.toLowerCase()}:${name}:${randomProductNonce()}`));
       await tx.send({
         ...k.campaigns,
         functionName: "createCampaign",
