@@ -16,6 +16,11 @@ import type { StoreInvoice, StorePayment } from "@/lib/shared/pos";
 import type { CampaignView } from "@/lib/shared/types";
 import { Alert, Button, Input, TxStatus } from "./ui";
 
+function randomOrderNonce(): string {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 export function Checkout({ campaign: c, invoice }: { campaign: CampaignView; invoice?: StoreInvoice }) {
   const { t } = useI18n();
   const { address } = useConnection();
@@ -89,7 +94,7 @@ export function Checkout({ campaign: c, invoice }: { campaign: CampaignView; inv
       const current = await apiPost<StorePayment>(`/api/pos/${invoice.id}`, {}, headers);
       if (current.status !== "Awaiting payment") throw new Error("This payment request is no longer payable");
     }
-    const orderHash = invoice?.orderHash ?? keccak256(toBytes(`order:${crypto.randomUUID()}`));
+    const orderHash = invoice?.orderHash ?? keccak256(toBytes(`order:${randomOrderNonce()}`));
     const orderExpiry = expiry();
     const order = {
       productId: c.productId,
