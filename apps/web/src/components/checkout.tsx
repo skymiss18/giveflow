@@ -21,7 +21,7 @@ function randomOrderNonce(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export function Checkout({ campaign: c, invoice }: { campaign: CampaignView; invoice?: StoreInvoice }) {
+export function Checkout({ campaign: c, invoice, initialQuantity }: { campaign: CampaignView; invoice?: StoreInvoice; initialQuantity?: number }) {
   const { t } = useI18n();
   const { address } = useConnection();
   const publicClient = usePublicClient();
@@ -31,7 +31,7 @@ export function Checkout({ campaign: c, invoice }: { campaign: CampaignView; inv
   const action = useAction();
   const auth = useWalletAuth();
   const { mutateAsync: signTypedData } = useSignTypedData();
-  const [qty, setQty] = useState(invoice?.quantity ?? 1);
+  const [qty, setQty] = useState(invoice?.quantity ?? initialQuantity ?? 1);
   const [paymentId, setPaymentId] = useState<`0x${string}` | null>(null);
   const now = useNow(1000);
   const blocked = invoice && now > invoice.expiresAt ? t("This payment request has expired")

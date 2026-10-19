@@ -7,6 +7,7 @@ import { use } from "react";
 import { useApi } from "@/lib/client/api";
 import { bpsToPercent, formatUsdc } from "@/lib/shared/format";
 import { hashMetadata } from "@/lib/shared/metadata";
+import { clampQuantity } from "@/lib/shared/supermarket";
 import type { CampaignView } from "@/lib/shared/types";
 import { Checkout } from "@/components/checkout";
 import { PaymentCode } from "@/components/payment-code";
@@ -23,9 +24,10 @@ import {
   statusTone,
 } from "@/components/ui";
 
-export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ProductPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ qty?: string }> }) {
   const { t, formatDate, formatDuration } = useI18n();
   const { id } = use(params);
+  const { qty } = use(searchParams);
   const { data: c, isLoading, error } = useApi<CampaignView>(`/api/data/campaigns/${id}`);
 
   if (isLoading) return <Loading />;
@@ -92,7 +94,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             {formatUsdc(c.unitPrice)} <span className="text-base font-normal">mUSDC</span>
           </div>
           <RequireWallet message={t("Connect a wallet to buy. You can get free test tokens from the Faucet.")}>
-            {() => <Checkout campaign={c} />}
+            {() => <Checkout campaign={c} initialQuantity={qty ? clampQuantity(qty) : undefined} />}
           </RequireWallet>
         </Card>
       </div>

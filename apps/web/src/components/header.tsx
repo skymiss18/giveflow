@@ -8,6 +8,7 @@ import { ConnectButton } from "./wallet";
 
 const LINKS = [
   { href: "/shop", label: "Shop" },
+  { href: "/supermarket", label: "Supermarket" },
   { href: "/projects", label: "Projects" },
   { href: "/orders", label: "My orders" },
   { href: "/merchant", label: "Merchant" },

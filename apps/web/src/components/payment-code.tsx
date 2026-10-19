@@ -10,7 +10,7 @@ const subscribe = () => () => {};
 const originSnapshot = () => window.location.origin;
 const serverSnapshot = () => "";
 
-export function PaymentCode({ path, label }: { path: string; label: string }) {
+export function PaymentCode({ path, label, size = 196 }: { path: string; label: string; size?: number }) {
   const { t } = useI18n();
   const id = useId();
   const origin = useSyncExternalStore(subscribe, originSnapshot, serverSnapshot);
@@ -32,8 +32,8 @@ export function PaymentCode({ path, label }: { path: string; label: string }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-5">
-        <div className="flex h-56 w-56 shrink-0 items-center justify-center rounded-lg border border-line bg-white p-3">
-          {url && <QRCodeSVG id={id} value={url} size={196} marginSize={4} level="M" role="img" aria-label={label} title={label} />}
+        <div className="flex shrink-0 items-center justify-center rounded-lg border border-line bg-white p-3" style={{ width: size + 28, height: size + 28 }}>
+          {url && <QRCodeSVG id={id} value={url} size={size} marginSize={4} level="M" role="img" aria-label={label} title={label} />}
         </div>
         <div className="min-w-0 space-y-3">
           <div className="text-sm font-medium">{label}</div>
