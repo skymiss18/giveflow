@@ -128,12 +128,11 @@ export function Header() {
               href="/faucet"
               aria-label={t("Test token faucet")}
               aria-current={pathname === "/faucet" ? "page" : undefined}
-              className={`group relative flex h-9 w-9 items-center justify-center rounded-lg border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${pathname === "/faucet" ? "border-ink/20 bg-mint-soft text-ink" : "border-transparent text-ink-soft hover:border-line hover:bg-paper hover:text-ink"}`}
+              title={t("Test token faucet")}
+              className={`flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${pathname === "/faucet" ? "border-ink/20 bg-mint-soft font-medium text-ink" : "border-transparent text-ink-soft hover:border-line hover:bg-paper hover:text-ink"}`}
             >
               <Droplets size={17} strokeWidth={1.75} aria-hidden="true" />
-              <span aria-hidden="true" className="pointer-events-none absolute right-0 top-full z-30 mt-2 w-max max-w-56 rounded-md bg-ink px-2.5 py-1.5 text-xs text-paper opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-                {t("Test token faucet")}
-              </span>
+              {t("Faucet")}
             </Link>
           </div>
         </div>
