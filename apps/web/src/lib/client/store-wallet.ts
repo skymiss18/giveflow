@@ -191,6 +191,5 @@ export async function payWithStoreWallet(options: {
   if (receipt.status !== "success") throw new Error("Transaction reverted on-chain");
   const hash = relayed.hash;
   onProgress("Verifying payment", hash);
-  await apiPost("/api/sync", {}).catch(() => undefined);
   return hash;
 }

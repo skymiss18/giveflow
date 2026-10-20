@@ -1,8 +1,6 @@
 ﻿import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { DeploymentGuard } from "@/components/deployment-guard";
-import { Footer } from "@/components/footer";
-import { Header } from "@/components/header";
+import { AppShell } from "@/components/app-shell";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -16,11 +14,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body className="min-h-screen antialiased">
         <Providers>
-          <Header />
-          <main className="mx-auto max-w-6xl px-4 py-10">
-            <DeploymentGuard>{children}</DeploymentGuard>
-          </main>
-          <Footer />
+          <AppShell>{children}</AppShell>
         </Providers>
       </body>
     </html>

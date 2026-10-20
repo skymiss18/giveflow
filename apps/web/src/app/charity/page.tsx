@@ -31,6 +31,7 @@ function Console({ address }: { address: Hex }) {
   const party = useApi<PartyView[]>(`/api/data/parties?kind=charity&wallet=${address}`, 5_000);
   const [tab, setTab] = useState<"Treasuries" | "Projects" | "Evidence" | "Reports">("Treasuries");
   if (party.isLoading) return <Loading />;
+  if (party.error) return <Alert tone="bad">{t("Unable to load your charity status. Please try again.")}</Alert>;
   const me = party.data?.[0];
 
   if (!me || me.status === "Rejected") {
@@ -98,7 +99,7 @@ function ApplyForm() {
       <Field label={t("Website (optional)")}>
         <Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://" />
       </Field>
-      {action.error && <Alert tone="bad">{action.error}</Alert>}
+      {action.error && action.error !== tx.error && <Alert tone="bad">{action.error}</Alert>}
       <Button disabled={!name.trim() || tx.busy || action.pending} onClick={() => void submit()}>
          {t("Submit application")} </Button>
       <TxStatus tx={tx} />

@@ -1,0 +1,15 @@
+GIVEFLOW TEST DEMONSTRATION - SIMULATED DOCUMENT
+DOCUMENT TYPE: Procurement invoice
+REFERENCE: DEMO-SG-2026-014
+ISSUED: 20 October 2026
+SUPPLIER: Northstar Learning Supply (fictional demonstration vendor)
+PROGRAMME: Harbourlight Community Learning Fund - After-school learning kits
+
+ITEM                                      QTY    UNIT (mUSDC)    TOTAL (mUSDC)
+Student notebook and stationery set        20        12.00           240.00
+LED reading light                          10        16.00           160.00
+Reusable storage pouch                     20         4.00            80.00
+
+SIMULATED TOTAL: 480.00 mUSDC
+Payment status: Demonstration record only; no supplier payment was made.
+Prepared for product testing. No real supplier, invoice, or purchase is represented.

@@ -4,10 +4,12 @@ import {
   checkoutRouterAbi,
   donationTreasuryAbi,
   evidenceRegistryAbi,
+  impactReportRegistryAbi,
   merchantRegistryAbi,
   mockUSDCAbi,
   pauseControllerAbi,
   productCampaignAbi,
+  treasuryFactoryAbi,
 } from "@/contracts/abis";
 import {
   CAMPAIGN_STATUS,
@@ -38,13 +40,20 @@ import type {
 } from "@/lib/shared/types";
 import { CHAIN_ID, publicClient } from "./chain";
 import { getDb } from "./db";
-import { ensureSynced, queryEvents, type EventRow } from "./indexer";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 export const VERIFIER_ROLE = keccak256(toBytes("VERIFIER_ROLE"));
 
-const str = (v: unknown) => String(v);
 const lc = (v: string) => v.toLowerCase();
+
+async function readIndexed<T>(count: bigint, read: (index: bigint) => Promise<T>): Promise<T[]> {
+  const values: T[] = [];
+  for (let offset = 0n; offset < count; offset += 20n) {
+    const size = Number(count - offset < 20n ? count - offset : 20n);
+    values.push(...await Promise.all(Array.from({ length: size }, (_, index) => read(offset + BigInt(index)))));
+  }
+  return values;
+}
 
 export function loadMetadata<T>(hash: string): T | null {
   if (!hash || /^0x0+$/.test(hash)) return null;
@@ -120,23 +129,20 @@ async function usdcBalance(address: Hex): Promise<bigint> {
 type OrderFilter = { buyer?: string; merchant?: string; campaignId?: string; projectId?: string; paymentId?: string };
 
 export async function getOrders(filter: OrderFilter = {}): Promise<OrderView[]> {
-  await ensureSynced();
-  const purchases = queryEvents({
-    names: ["PurchaseCompleted"],
-    where: {
-      ...(filter.buyer ? { buyer: filter.buyer } : {}),
-      ...(filter.campaignId ? { campaignId: filter.campaignId } : {}),
-      ...(filter.paymentId ? { paymentId: filter.paymentId } : {}),
-    },
-    order: "desc",
-  });
-  const settled = new Map(queryEvents({ names: ["PaymentSettled"] }).map((e) => [lc(str(e.args.paymentId)), e]));
-  const refunded = new Map(queryEvents({ names: ["RefundExecuted"] }).map((e) => [lc(str(e.args.paymentId)), e]));
+  const router = { address: getDeployment().CheckoutRouter, abi: checkoutRouterAbi };
+  const ids = filter.paymentId ? [filter.paymentId as Hex] : await readIndexed(
+    await publicClient.readContract({ ...router, functionName: "paymentCount" }),
+    (index) => publicClient.readContract({ ...router, functionName: "paymentIdAt", args: [index] }),
+  );
   const projectTitles = new Map<string, string | null>();
 
   const views: OrderView[] = [];
-  for (const e of purchases) {
-    const campaignId = str(e.args.campaignId);
+  for (const paymentId of ids.reverse()) {
+    const payment = await publicClient.readContract({ ...router, functionName: "getPayment", args: [paymentId] });
+    if (payment.status === 0) continue;
+    if (filter.buyer && lc(payment.buyer) !== lc(filter.buyer)) continue;
+    const campaignId = payment.campaignId.toString();
+    if (filter.campaignId && campaignId !== filter.campaignId) continue;
     const c = await immutableCampaign(campaignId);
     const projectId = c.projectId.toString();
     if (filter.merchant && lc(c.merchant) !== lc(filter.merchant)) continue;
@@ -146,32 +152,27 @@ export async function getOrders(filter: OrderFilter = {}): Promise<OrderView[]> 
       const p = await readProject(projectId);
       projectTitles.set(projectId, loadMetadata<ProjectMeta>(p.metadataHash)?.title ?? null);
     }
-    const key = lc(str(e.args.paymentId));
-    const s = settled.get(key);
-    const r = refunded.get(key);
-    const gross = BigInt(str(e.args.gross));
-    const donation = BigInt(str(e.args.donation));
     views.push({
-      paymentId: e.args.paymentId as Hex,
-      productId: e.args.productId as Hex,
+      paymentId,
+      productId: c.productId,
       productName: loadMetadata<ProductMeta>(c.metadataHash)?.name ?? null,
       campaignId,
       projectId,
       projectTitle: projectTitles.get(projectId) ?? null,
       merchant: c.merchant,
-      buyer: e.args.buyer as Hex,
-      quantity: Number(e.args.quantity),
-      gross: gross.toString(),
-      donation: donation.toString(),
-      fee: s ? str(s.args.fee) : ((gross * BigInt(c.serviceFeeBps)) / 10_000n).toString(),
-      token: e.args.token as Hex,
-      orderHash: e.args.orderHash as Hex,
-      status: r ? PAYMENT_STATUS[3] : s ? PAYMENT_STATUS[2] : PAYMENT_STATUS[1],
-      txHash: e.txHash,
-      timestamp: e.timestamp,
-      settleAfter: e.timestamp + Number(c.refundWindow),
-      settleTxHash: s?.txHash ?? null,
-      refundTxHash: r?.txHash ?? null,
+      buyer: payment.buyer,
+      quantity: payment.quantity,
+      gross: payment.gross.toString(),
+      donation: payment.donation.toString(),
+      fee: payment.fee.toString(),
+      token: c.paymentToken,
+      orderHash: payment.orderHash,
+      status: PAYMENT_STATUS[payment.status],
+      txHash: null,
+      timestamp: Number(payment.createdAt),
+      settleAfter: Number(payment.settleAfter),
+      settleTxHash: null,
+      refundTxHash: null,
     });
   }
   return views;
@@ -180,29 +181,30 @@ export async function getOrders(filter: OrderFilter = {}): Promise<OrderView[]> 
 /* ----------------------------- campaigns ---------------------------- */
 
 export async function getCampaigns(filter: { merchant?: string; activeOnly?: boolean } = {}): Promise<CampaignView[]> {
-  await ensureSynced();
-  const published = queryEvents({
-    names: ["CampaignPublished"],
-    where: filter.merchant ? { merchant: filter.merchant } : {},
-    order: "desc",
+  const count = await publicClient.readContract({
+    address: getDeployment().ProductCampaign, abi: productCampaignAbi, functionName: "campaignCount",
   });
+  const campaigns = await readIndexed(count, async (index) => ({ id: (index + 1n).toString(), fresh: await readCampaign((index + 1n).toString()) }));
   const orders = await getOrders();
-  const latestByProduct = new Map<string, string>();
-  for (const e of queryEvents({ names: ["CampaignPublished"] })) {
-    latestByProduct.set(lc(str(e.args.productId)), str(e.args.campaignId));
-  }
 
   const views: CampaignView[] = [];
-  for (const e of published) {
-    const id = str(e.args.campaignId);
-    const fresh = await readCampaign(id);
+  for (const { id, fresh } of campaigns.reverse()) {
     const status = CAMPAIGN_STATUS[Number(fresh.status)];
     if (filter.activeOnly && status !== "Active") continue;
+    if (filter.merchant && lc(fresh.merchant) !== lc(filter.merchant)) continue;
+    views.push(await campaignView(id, fresh, orders));
+  }
+  return views;
+}
 
+async function campaignView(id: string, fresh: Awaited<ReturnType<typeof readCampaign>>, orders: OrderView[]): Promise<CampaignView> {
     const project = await readProject(fresh.projectId.toString());
     const merchantMeta = loadMetadata<MerchantProfileMeta>((await readMerchant(fresh.merchant)).metadataHash);
     const mine = orders.filter((o) => o.campaignId === id && o.status !== "Refunded");
-    views.push({
+    const latest = await publicClient.readContract({
+      address: getDeployment().ProductCampaign, abi: productCampaignAbi, functionName: "latestCampaignOf", args: [fresh.productId],
+    });
+    return {
       campaignId: id,
       productId: fresh.productId,
       merchant: fresh.merchant,
@@ -221,8 +223,8 @@ export async function getCampaigns(filter: { merchant?: string; activeOnly?: boo
       saleEnd: Number(fresh.saleEnd),
       refundWindow: Number(fresh.refundWindow),
       ruleVersion: fresh.ruleVersion,
-      status,
-      isLatest: latestByProduct.get(lc(fresh.productId)) === id,
+      status: CAMPAIGN_STATUS[Number(fresh.status)],
+      isLatest: latest.toString() === id,
       metadataHash: fresh.metadataHash,
       meta: loadMetadata<ProductMeta>(fresh.metadataHash),
       stats: {
@@ -231,15 +233,15 @@ export async function getCampaigns(filter: { merchant?: string; activeOnly?: boo
         gross: mine.reduce((n, o) => n + BigInt(o.gross), 0n).toString(),
         donated: mine.reduce((n, o) => n + BigInt(o.donation), 0n).toString(),
       },
-      txHash: e.txHash,
-    });
-  }
-  return views;
+      txHash: null,
+    };
 }
 
 export async function getCampaign(id: string): Promise<CampaignView | null> {
-  const all = await getCampaigns();
-  return all.find((c) => c.campaignId === id) ?? null;
+  if (!/^\d+$/.test(id) || BigInt(id) < 1n) return null;
+  const fresh = await readCampaign(id);
+  if (fresh.merchant === ZERO) return null;
+  return campaignView(id, fresh, await getOrders({ campaignId: id }));
 }
 
 /* ------------------------------ parties ----------------------------- */
@@ -285,26 +287,26 @@ async function getMerchantParties(wallet?: string): Promise<PartyView[]> {
 
 export async function getParties(kind: "merchant" | "charity", wallet?: string): Promise<PartyView[]> {
   if (kind === "merchant") return getMerchantParties(wallet);
-  await ensureSynced();
-  const applied = queryEvents({
-    names: ["CharityApplied"],
-    where: wallet ? { wallet } : {},
-  });
-  const first = new Map<string, EventRow>();
-  for (const e of applied) first.set(lc(str(e.args.wallet)), e);
-
+  const registry = { address: getDeployment().CharityRegistry, abi: charityRegistryAbi };
+  const wallets: Hex[] = wallet ? [wallet as Hex] : [];
+  if (!wallet) {
+    const total = await publicClient.readContract({ ...registry, functionName: "applicantCount" });
+    for (let offset = 0n; offset < total; offset += APPLICANT_PAGE) {
+      wallets.push(...await publicClient.readContract({ ...registry, functionName: "getApplicants", args: [offset, APPLICANT_PAGE] }));
+    }
+  }
   const views: PartyView[] = [];
-  for (const [, e] of first) {
-    const w = e.args.wallet as Hex;
-    const c = await readCharity(w);
+  for (const address of wallets) {
+    const c = await readCharity(address);
+    if (c.status === 0) continue;
     views.push({
-      wallet: w,
+      wallet: address,
       kind: "charity",
       status: CHARITY_STATUS[Number(c.status)],
       metadataHash: c.metadataHash,
       receiver: null,
       meta: loadMetadata<CharityProfileMeta>(c.metadataHash),
-      appliedAt: e.timestamp,
+      appliedAt: Number(c.appliedAt),
     });
   }
   return views.sort((a, b) => b.appliedAt - a.appliedAt);
@@ -313,30 +315,24 @@ export async function getParties(kind: "merchant" | "charity", wallet?: string):
 /* ------------------------------ evidence ---------------------------- */
 
 export async function getEvidence(filter: { projectId?: string; status?: string } = {}): Promise<EvidenceView[]> {
-  await ensureSynced();
   const dep = getDeployment();
-  const submitted = queryEvents({
-    names: ["EvidenceSubmitted"],
-    where: filter.projectId ? { projectId: filter.projectId } : {},
-    order: "desc",
-  });
+  const registry = { address: dep.EvidenceRegistry, abi: evidenceRegistryAbi };
+  const count = await publicClient.readContract({ ...registry, functionName: "evidenceCount" });
+  const entries = await readIndexed(count, async (index) => ({
+    id: index + 1n,
+    ev: await publicClient.readContract({ ...registry, functionName: "getEvidence", args: [index + 1n] }),
+  }));
   const db = getDb();
   const views: EvidenceView[] = [];
-  for (const e of submitted) {
-    const id = str(e.args.evidenceId);
-    const ev = await publicClient.readContract({
-      address: dep.EvidenceRegistry,
-      abi: evidenceRegistryAbi,
-      functionName: "getEvidence",
-      args: [BigInt(id)],
-    });
+  for (const { id, ev } of entries.reverse()) {
+    if (filter.projectId && ev.projectId.toString() !== filter.projectId) continue;
     const status = EVIDENCE_STATUS[Number(ev.status)];
     if (filter.status && status !== filter.status) continue;
     const file = db
       .prepare("SELECT file_name, mime, size FROM evidence_files WHERE content_hash = ?")
       .get(ev.contentHash) as { file_name: string; mime: string; size: number } | undefined;
     views.push({
-      evidenceId: id,
+      evidenceId: id.toString(),
       projectId: ev.projectId.toString(),
       contentHash: ev.contentHash,
       kind: EVIDENCE_KIND[Number(ev.kind)],
@@ -346,8 +342,8 @@ export async function getEvidence(filter: { projectId?: string; status?: string 
       submittedAt: Number(ev.submittedAt),
       verifiedAt: Number(ev.verifiedAt),
       noteHash: /^0x0+$/.test(ev.noteHash) ? null : ev.noteHash,
-      storageRef: str(e.args.storageRef),
-      txHash: e.txHash,
+      storageRef: await publicClient.readContract({ ...registry, functionName: "storageRefOf", args: [id] }),
+      txHash: null,
       file: file ? { name: file.file_name, mime: file.mime, size: file.size } : null,
     });
   }
@@ -357,7 +353,6 @@ export async function getEvidence(filter: { projectId?: string; status?: string 
 /* ----------------------------- treasuries --------------------------- */
 
 export async function getTreasury(address: Hex): Promise<TreasuryView> {
-  await ensureSynced();
   const read = <T extends "owners" | "threshold" | "proposalCount">(fn: T) =>
     publicClient.readContract({ address, abi: donationTreasuryAbi, functionName: fn });
   const [owners, threshold, count, balance] = await Promise.all([
@@ -398,9 +393,8 @@ export async function getTreasury(address: Hex): Promise<TreasuryView> {
     }),
   );
 
-  const projectIds = queryEvents({ names: ["CharityProjectCreated"] })
-    .filter((e) => lc(str(e.args.treasury)) === lc(address))
-    .map((e) => str(e.args.projectId));
+  const projects = await readProjects();
+  const projectIds = projects.filter(({ project }) => lc(project.treasury) === lc(address)).map(({ id }) => id);
 
   return {
     address,
@@ -413,23 +407,34 @@ export async function getTreasury(address: Hex): Promise<TreasuryView> {
 }
 
 export async function getTreasuriesFor(wallet: string): Promise<TreasuryView[]> {
-  await ensureSynced();
-  const created = queryEvents({ names: ["TreasuryCreated"], order: "desc" });
-  const mine = created.filter(
-    (e) => lc(str(e.args.creator)) === lc(wallet) || (e.args.owners as string[]).some((o) => lc(o) === lc(wallet)),
-  );
-  return Promise.all(mine.map((e) => getTreasury(e.args.treasury as Hex)));
+  const addresses = await publicClient.readContract({
+    address: getDeployment().TreasuryFactory,
+    abi: treasuryFactoryAbi,
+    functionName: "treasuriesFor",
+    args: [wallet as Hex],
+  });
+  return Promise.all([...addresses].reverse().map((address) => getTreasury(address)));
 }
 
 /* ------------------------------ projects ---------------------------- */
 
-function reportRefs(projectId: string): ReportRef[] {
-  return queryEvents({ names: ["ImpactReportPublished"], where: { projectId } }).map((e) => ({
-    version: Number(e.args.version),
-    reportHash: e.args.reportHash as Hex,
-    publishedAt: e.timestamp,
-    uri: str(e.args.uri),
-  }));
+async function reportRefs(projectId: string): Promise<ReportRef[]> {
+  const registry = { address: getDeployment().ImpactReportRegistry, abi: impactReportRegistryAbi };
+  const count = await publicClient.readContract({ ...registry, functionName: "reportCount", args: [BigInt(projectId)] });
+  return readIndexed(count, async (index) => {
+    const [report, uri] = await Promise.all([
+      publicClient.readContract({ ...registry, functionName: "reportAt", args: [BigInt(projectId), index] }),
+      publicClient.readContract({ ...registry, functionName: "reportUri", args: [BigInt(projectId), index] }),
+    ]);
+    return { version: report.version, reportHash: report.reportHash, publishedAt: Number(report.publishedAt), uri };
+  });
+}
+
+async function readProjects() {
+  const count = await publicClient.readContract({
+    address: getDeployment().CharityRegistry, abi: charityRegistryAbi, functionName: "projectCount",
+  });
+  return readIndexed(count, async (index) => ({ id: (index + 1n).toString(), project: await readProject((index + 1n).toString()) }));
 }
 
 async function projectView(projectId: string, orders: OrderView[], evidence: EvidenceView[]): Promise<ProjectView> {
@@ -438,7 +443,7 @@ async function projectView(projectId: string, orders: OrderView[], evidence: Evi
   const mine = orders.filter((o) => o.projectId === projectId);
   const sum = (status: string) =>
     mine.filter((o) => o.status === status).reduce((n, o) => n + BigInt(o.donation), 0n).toString();
-  const refs = reportRefs(projectId);
+  const refs = await reportRefs(projectId);
   return {
     projectId,
     charity: p.charity,
@@ -462,26 +467,14 @@ async function projectView(projectId: string, orders: OrderView[], evidence: Evi
 }
 
 export async function getProjects(filter: { charity?: string } = {}): Promise<ProjectView[]> {
-  await ensureSynced();
-  const created = queryEvents({
-    names: ["CharityProjectCreated"],
-    where: filter.charity ? { charity: filter.charity } : {},
-    order: "desc",
-  });
+  const projects = (await readProjects()).reverse().filter(({ project }) => !filter.charity || lc(project.charity) === lc(filter.charity));
   const [orders, evidence] = await Promise.all([getOrders(), getEvidence()]);
-  return Promise.all(
-    created.map((e) =>
-      projectView(
-        str(e.args.projectId),
-        orders,
-        evidence.filter((ev) => ev.projectId === str(e.args.projectId)),
-      ),
-    ),
+  return readIndexed(BigInt(projects.length), (index) =>
+    projectView(projects[Number(index)].id, orders, evidence.filter((ev) => ev.projectId === projects[Number(index)].id)),
   );
 }
 
 export async function getProjectDetail(projectId: string): Promise<ProjectDetail | null> {
-  await ensureSynced();
   const count = await publicClient.readContract({
     address: getDeployment().CharityRegistry,
     abi: charityRegistryAbi,
@@ -491,7 +484,7 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
 
   const [orders, evidence] = await Promise.all([getOrders({ projectId }), getEvidence({ projectId })]);
   const base = await projectView(projectId, orders, evidence);
-  return { ...base, evidenceList: evidence, orderList: orders, reports: reportRefs(projectId) };
+  return { ...base, evidenceList: evidence, orderList: orders, reports: await reportRefs(projectId) };
 }
 
 /* ------------------------------- reports ---------------------------- */
@@ -564,8 +557,7 @@ export async function buildReportSnapshot(projectId: string): Promise<ReportSnap
 }
 
 export async function getPublishedReport(projectId: string, version?: number): Promise<PublishedReport | null> {
-  await ensureSynced();
-  const refs = reportRefs(projectId);
+  const refs = await reportRefs(projectId);
   const ref = version ? refs.find((r) => r.version === version) : refs[refs.length - 1];
   if (!ref) return null;
   const snapshot = loadMetadata<ReportSnapshot>(ref.reportHash);
@@ -578,7 +570,6 @@ export async function getPublishedReport(projectId: string, version?: number): P
 /* ------------------------------ overview ---------------------------- */
 
 export async function getAdminOverview(): Promise<AdminOverview> {
-  await ensureSynced();
   const dep = getDeployment();
   const [platformReceiver, serviceFeeBps, globalPaused, tokenAllowed] = await Promise.all([
     publicClient.readContract({ address: dep.CheckoutRouter, abi: checkoutRouterAbi, functionName: "platformReceiver" }),
@@ -592,26 +583,18 @@ export async function getAdminOverview(): Promise<AdminOverview> {
     }),
   ]);
 
-  const granted = queryEvents({ names: ["RoleGranted"], address: dep.EvidenceRegistry, where: { role: VERIFIER_ROLE } });
-  const candidates = [...new Set(granted.map((e) => str(e.args.account)))] as Hex[];
-  const flags = await Promise.all(
-    candidates.map((account) =>
-      publicClient.readContract({
-        address: dep.EvidenceRegistry,
-        abi: evidenceRegistryAbi,
-        functionName: "hasRole",
-        args: [VERIFIER_ROLE, account],
-      }),
-    ),
-  );
-
-  const pauseEvents = (name: string, key: string) => {
-    const latest = new Map<string, boolean>();
-    for (const e of queryEvents({ names: [name], address: dep.PauseController })) {
-      latest.set(str(e.args[key]), Boolean(e.args.paused));
-    }
-    return [...latest].filter(([, paused]) => paused).map(([id]) => id);
-  };
+  const registry = { address: dep.EvidenceRegistry, abi: evidenceRegistryAbi };
+  const pauser = { address: dep.PauseController, abi: pauseControllerAbi };
+  const [verifierCount, campaignCount, projectCount] = await Promise.all([
+    publicClient.readContract({ ...registry, functionName: "getRoleMemberCount", args: [VERIFIER_ROLE] }),
+    publicClient.readContract({ ...pauser, functionName: "pausedCampaignCount" }),
+    publicClient.readContract({ ...pauser, functionName: "pausedProjectCount" }),
+  ]);
+  const [verifiers, pausedCampaigns, pausedProjects] = await Promise.all([
+    readIndexed(verifierCount, (index) => publicClient.readContract({ ...registry, functionName: "getRoleMember", args: [VERIFIER_ROLE, index] })),
+    readIndexed(campaignCount, (index) => publicClient.readContract({ ...pauser, functionName: "pausedCampaignAt", args: [index] })),
+    readIndexed(projectCount, (index) => publicClient.readContract({ ...pauser, functionName: "pausedProjectAt", args: [index] })),
+  ]);
 
   return {
     admin: dep.admin,
@@ -619,21 +602,20 @@ export async function getAdminOverview(): Promise<AdminOverview> {
     serviceFeeBps,
     globalPaused,
     tokenAllowed,
-    verifiers: candidates.filter((_, i) => flags[i]),
-    pausedCampaigns: pauseEvents("CampaignPaused", "campaignId"),
-    pausedProjects: pauseEvents("ProjectPauseChanged", "projectId"),
+    verifiers,
+    pausedCampaigns: pausedCampaigns.map(String),
+    pausedProjects: pausedProjects.map(String),
   };
 }
 
 export async function getStats(): Promise<Stats> {
-  await ensureSynced();
   const orders = await getOrders();
   const evidence = await getEvidence();
   const donated = orders.filter((o) => o.status === "Settled").reduce((n, o) => n + BigInt(o.donation), 0n);
   return {
     orders: orders.filter((o) => o.status !== "Refunded").length,
     donated: donated.toString(),
-    projects: queryEvents({ names: ["CharityProjectCreated"] }).length,
+    projects: Number(await publicClient.readContract({ address: getDeployment().CharityRegistry, abi: charityRegistryAbi, functionName: "projectCount" })),
     merchants: (await getParties("merchant")).filter((m) => m.status === "Approved").length,
     verifiedEvidence: evidence.filter((e) => e.status === "Verified").length,
     totalEvidence: evidence.length,

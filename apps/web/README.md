@@ -1,6 +1,34 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Getting Started
+## Contract Reads
+
+Business queries read contract state directly with `eth_call`; they do not scan
+logs or read the SQLite `events` / `sync_state` tables. Orders, applicants,
+campaigns, projects, evidence, reports, verifier roles and paused IDs are
+enumerated by the contracts. Treasury membership and proposal state are also
+read on-chain. Existing event tables are left untouched but are unused.
+
+SQLite still stores off-chain metadata, evidence file information, POS records
+and rate limits. Report and evidence references are stored in contracts; their
+content remains off-chain. Historical transaction hashes cannot be recovered
+from contract state, so query results return null and omit those explorer links.
+Newly submitted transactions still have receipt hashes.
+
+This version requires a fresh full-stack deployment using
+`contracts/script/Deploy.s.sol`, followed by `node scripts/sync-abi.mjs` at the
+repository root. Archive previous addresses under `contracts/deployments/archive/`
+before replacing an active deployment. Do not place same-chain archives alongside
+the active JSON files, since the generator reads all top-level JSON files.
+Update `RELAY_ALLOWED_TOKENS`, rebuild/restart the app, then run the seed script
+with the desired `CHAIN_ID`. Previous contracts and funds remain untouched;
+the new deployment has separate business records.
+
+From the repository root, validate with `pnpm --filter web test`,
+`pnpm --filter web typecheck`, and `pnpm --filter web test:e2e`. E2E uses its own
+Anvil node, fresh database and development server. Both client and server RPC
+settings are overridden to keep it isolated from Sepolia.
+
+## Development
 
 First, run the development server:
 

@@ -22,6 +22,7 @@ contract CharityRegistry is AccessControl {
     struct Charity {
         Status status;
         bytes32 metadataHash;
+        uint64 appliedAt;
     }
 
     struct Project {
@@ -35,6 +36,7 @@ contract CharityRegistry is AccessControl {
     uint256 public projectCount;
     mapping(address => Charity) private _charities;
     mapping(uint256 => Project) private _projects;
+    address[] private _applicants;
 
     event CharityApplied(address indexed wallet, bytes32 metadataHash);
     event CharityStatusChanged(address indexed wallet, Status status);
@@ -55,8 +57,10 @@ contract CharityRegistry is AccessControl {
     function applyAsCharity(bytes32 metadataHash) external {
         Charity storage c = _charities[msg.sender];
         if (c.status != Status.None && c.status != Status.Rejected) revert InvalidState();
+        if (c.status == Status.None) _applicants.push(msg.sender);
         c.status = Status.Pending;
         c.metadataHash = metadataHash;
+        c.appliedAt = uint64(block.timestamp);
         emit CharityApplied(msg.sender, metadataHash);
         emit CharityStatusChanged(msg.sender, Status.Pending);
     }
@@ -113,6 +117,21 @@ contract CharityRegistry is AccessControl {
 
     function getCharity(address wallet) external view returns (Charity memory) {
         return _charities[wallet];
+    }
+
+    function applicantCount() external view returns (uint256) {
+        return _applicants.length;
+    }
+
+    function getApplicants(uint256 offset, uint256 limit) external view returns (address[] memory page) {
+        uint256 total = _applicants.length;
+        if (offset >= total) return page;
+        uint256 size = total - offset;
+        if (limit < size) size = limit;
+        page = new address[](size);
+        for (uint256 index; index < size; index++) {
+            page[index] = _applicants[offset + index];
+        }
     }
 
     function getProject(uint256 projectId) external view returns (Project memory) {

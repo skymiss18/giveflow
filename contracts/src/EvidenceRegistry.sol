@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {AccessControlEnumerable} from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 import {CharityRegistry} from "./CharityRegistry.sol";
 
 /// @notice Stores content hashes only; files and any beneficiary data stay off-chain.
-contract EvidenceRegistry is AccessControl {
+contract EvidenceRegistry is AccessControlEnumerable {
     bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
 
     enum Kind {
@@ -40,6 +40,7 @@ contract EvidenceRegistry is AccessControl {
 
     uint256 public evidenceCount;
     mapping(uint256 => Evidence) private _evidence;
+    mapping(uint256 => string) public storageRefOf;
     mapping(bytes32 => uint256) public evidenceIdByHash;
     mapping(uint256 => uint256) public submittedCount;
     mapping(uint256 => uint256) public verifiedCount;
@@ -88,6 +89,7 @@ contract EvidenceRegistry is AccessControl {
             noteHash: bytes32(0)
         });
         evidenceIdByHash[contentHash] = evidenceId;
+        storageRefOf[evidenceId] = storageRef;
         submittedCount[projectId]++;
         emit EvidenceSubmitted(evidenceId, projectId, contentHash, msg.sender, kind, storageRef);
     }

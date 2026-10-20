@@ -12,7 +12,12 @@ async function connectAs(page: Page, role: string) {
 }
 
 async function go(page: Page, name: string) {
-  const link = page.locator("header nav").getByRole("link", { name, exact: true });
+  const workspaces: Record<string, string> = {
+    Merchant: "Merchant workspace", Charity: "Charity workspace",
+    Admin: "Platform admin", Verifier: "Verification",
+  };
+  if (workspaces[name]) await page.locator("header nav summary").click();
+  const link = page.locator("header nav").getByRole("link", { name: workspaces[name] ?? name, exact: true });
   const href = await link.getAttribute("href");
   if (!href) throw new Error(`Navigation target missing: ${name}`);
   const target = new URL(href, page.url()).href;
@@ -123,6 +128,11 @@ test.describe.serial("GiveFlow journey", () => {
     await expect(page.getByLabel("Charity project")).toContainText("Learning kits");
     await page.getByRole("button", { name: "Publish on-chain" }).click();
     await expect(page.getByRole("link", { name: "Education Kit" })).toBeVisible({ timeout: 60_000 });
+
+    await page.goto("/supermarket");
+    await expect(page.getByRole("img", { name: "Scan to pay" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("button", { name: "Show payment QR" })).toHaveCount(0);
+    await page.goto("/");
   });
 
   test("buyer funds a wallet, pays, and sees the donation proof", async () => {

@@ -5,7 +5,6 @@ import { requireWallet } from "@/lib/server/auth";
 import { publicClient } from "@/lib/server/chain";
 import { getDb } from "@/lib/server/db";
 import { saveEvidence } from "@/lib/server/evidence-store";
-import { ensureSynced } from "@/lib/server/indexer";
 import { handle, HttpError, requireParam, UINT_RE } from "@/lib/server/http";
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -49,7 +48,6 @@ export function POST(req: Request) {
       )
       .run(contentHash, projectId, file.name.slice(0, 200), file.type, bytes.length, wallet, Math.floor(Date.now() / 1000));
 
-    await ensureSynced();
     return { contentHash, storageRef: `local://evidence/${contentHash}`, size: bytes.length, name: file.name };
   });
 }

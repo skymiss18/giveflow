@@ -53,7 +53,7 @@ export type OrderView = {
   token: Hex;
   orderHash: Hex;
   status: PaymentStatus;
-  txHash: Hex;
+  txHash: Hex | null;
   timestamp: number;
   settleAfter: number;
   settleTxHash: Hex | null;
@@ -82,7 +82,7 @@ export type EvidenceView = {
   verifiedAt: number;
   noteHash: Hex | null;
   storageRef: string;
-  txHash: Hex;
+  txHash: Hex | null;
   file: { name: string; mime: string; size: number } | null;
 };
 
@@ -162,7 +162,7 @@ export type ReportSnapshot = {
   };
   orders: {
     paymentId: Hex;
-    txHash: Hex;
+    txHash: Hex | null;
     campaignId: string;
     productName: string | null;
     quantity: number;
@@ -179,7 +179,7 @@ export type ReportSnapshot = {
     verifier: Hex | null;
     submittedAt: number;
     verifiedAt: number;
-    txHash: Hex;
+    txHash: Hex | null;
   }[];
   disbursements: { proposalId: string; to: Hex; amount: string; purposeHash: Hex; executed: boolean }[];
 };

@@ -1,0 +1,15 @@
+GIVEFLOW TEST DEMONSTRATION - SIMULATED DOCUMENT
+DOCUMENT TYPE: Delivery receipt
+REFERENCE: DEMO-DEL-2026-014
+DELIVERY DATE: 20 October 2026
+PROGRAMME: Harbourlight Community Learning Fund - After-school learning kits
+DELIVERED TO: Harbourlight Community Learning Hub (fictional demonstration site)
+
+Items received:
+- 20 student notebook and stationery sets
+- 10 LED reading lights
+- 20 reusable storage pouches
+
+Condition on receipt: Packaging intact; quantities checked against the simulated order.
+Recipient acknowledgement: Demonstration coordinator (role only; no personal name).
+This is synthetic test content. No real delivery or beneficiary is represented.

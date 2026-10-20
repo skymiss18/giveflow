@@ -32,6 +32,12 @@ export function TreasuriesTab({ address }: { address: Hex }) {
       <CreateTreasury address={address} />
       <SectionTitle hint={translate("Treasuries you created or co-sign")}>{translate("Your treasuries")}</SectionTitle>
       {treasuries.isLoading && <Loading />}
+      {treasuries.error && (
+        <Alert tone="bad">
+          {translate("Could not read treasury list from the chain.")} {" "}
+          <button type="button" className="underline underline-offset-2" onClick={() => void treasuries.refetch()}>{translate("Retry")}</button>
+        </Alert>
+      )}
       {treasuries.data?.length === 0 && <EmptyState title={translate("No treasuries yet")}>{translate("Create one above, then use it as a project's donation address.")}</EmptyState>}
       <div className="space-y-4">
         {treasuries.data?.map((t) => <TreasuryCard key={t.address} treasury={t} me={address} />)}
@@ -47,6 +53,7 @@ function CreateTreasury({ address }: { address: Hex }) {
   const action = useAction();
   const [owners, setOwners] = useState<string>(address);
   const [threshold, setThreshold] = useState("1");
+  const [existingAddress, setExistingAddress] = useState("");
 
   const submit = () =>
     action.run(async () => {
@@ -56,6 +63,13 @@ function CreateTreasury({ address }: { address: Hex }) {
       const t = Number(threshold);
       if (!Number.isInteger(t) || t < 1 || t > list.length) throw new Error("Threshold must be between 1 and the number of signers");
       await tx.send({ ...k.factory, functionName: "createTreasury", args: [list as Hex[], BigInt(t)] });
+    });
+
+  const registerExisting = () =>
+    action.run(async () => {
+      if (!isAddress(existingAddress)) throw new Error("Enter a valid treasury address");
+      await tx.send({ ...k.factory, functionName: "registerExistingTreasury", args: [existingAddress as Hex] });
+      setExistingAddress("");
     });
 
   return (
@@ -69,9 +83,17 @@ function CreateTreasury({ address }: { address: Hex }) {
       <Field label={translate("Approvals required")}>
         <Input value={threshold} onChange={(e) => setThreshold(e.target.value)} inputMode="numeric" className="max-w-24" />
       </Field>
-      {action.error && <Alert tone="bad">{action.error}</Alert>}
+      {action.error && action.error !== tx.error && <Alert tone="bad">{action.error}</Alert>}
       <Button disabled={tx.busy || action.pending} onClick={() => void submit()}>
          {translate("Create treasury")} </Button>
+      <div className="space-y-3 border-t border-line pt-4">
+        <Field label={translate("Register an existing treasury")} hint={translate("An owner can register a treasury created before this factory was deployed.")}>
+          <Input value={existingAddress} onChange={(e) => setExistingAddress(e.target.value)} className="font-mono" placeholder="0x…" />
+        </Field>
+        <Button variant="secondary" disabled={!isAddress(existingAddress) || tx.busy || action.pending} onClick={() => void registerExisting()}>
+          {translate("Register treasury")}
+        </Button>
+      </div>
       <TxStatus tx={tx} />
     </Card>
   );

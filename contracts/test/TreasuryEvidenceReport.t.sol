@@ -5,6 +5,7 @@ import {Base} from "./Base.t.sol";
 import {DonationTreasury} from "../src/DonationTreasury.sol";
 import {EvidenceRegistry} from "../src/EvidenceRegistry.sol";
 import {ImpactReportRegistry} from "../src/ImpactReportRegistry.sol";
+import {CharityRegistry} from "../src/CharityRegistry.sol";
 
 contract DonationTreasuryTest is Base {
     function setUp() public override {
@@ -114,6 +115,57 @@ contract DonationTreasuryTest is Base {
 contract EvidenceAndReportTest is Base {
     bytes32 internal constant HASH = keccak256("signed-receipt.pdf");
 
+    function test_verifierEnumerationTracksRevocationAndRenunciation() public {
+        bytes32 role = evidence.VERIFIER_ROLE();
+        assertEq(evidence.getRoleMemberCount(role), 1);
+        assertEq(evidence.getRoleMember(role, 0), verifier);
+        vm.startPrank(admin);
+        evidence.grantRole(role, stranger);
+        evidence.grantRole(role, stranger);
+        assertEq(evidence.getRoleMemberCount(role), 2);
+        evidence.revokeRole(role, verifier);
+        vm.stopPrank();
+        assertEq(evidence.getRoleMember(role, 0), stranger);
+        vm.prank(stranger);
+        evidence.renounceRole(role, stranger);
+        assertEq(evidence.getRoleMemberCount(role), 0);
+    }
+
+    function test_charityApplicantsAreUniqueAndPaginated() public {
+        assertEq(charities.applicantCount(), 1);
+        assertEq(charities.getApplicants(0, 1)[0], charity);
+        vm.prank(stranger);
+        charities.applyAsCharity(keccak256("first"));
+        vm.prank(admin);
+        charities.reject(stranger);
+        vm.warp(block.timestamp + 100);
+        vm.prank(stranger);
+        charities.applyAsCharity(keccak256("second"));
+        assertEq(charities.applicantCount(), 2);
+        assertEq(charities.getApplicants(1, 100).length, 1);
+        assertEq(charities.getApplicants(1, 100)[0], stranger);
+        assertEq(charities.getApplicants(2, 100).length, 0);
+        assertEq(charities.getApplicants(0, 0).length, 0);
+        assertEq(charities.getCharity(stranger).appliedAt, block.timestamp);
+        assertEq(uint8(charities.getCharity(stranger).status), uint8(CharityRegistry.Status.Pending));
+    }
+
+    function test_pauseEnumerationTracksCurrentState() public {
+        vm.startPrank(admin);
+        pauser.setCampaignPaused(999, true, "");
+        pauser.setCampaignPaused(999, true, "");
+        pauser.setProjectPaused(888, true, "");
+        assertEq(pauser.pausedCampaignCount(), 1);
+        assertEq(pauser.pausedCampaignAt(0), 999);
+        assertEq(pauser.pausedProjectCount(), 1);
+        assertEq(pauser.pausedProjectAt(0), 888);
+        pauser.setCampaignPaused(999, false, "");
+        pauser.setProjectPaused(888, false, "");
+        assertEq(pauser.pausedCampaignCount(), 0);
+        assertEq(pauser.pausedProjectCount(), 0);
+        vm.stopPrank();
+    }
+
     function _submit(bytes32 h) internal returns (uint256) {
         vm.prank(charity);
         return evidence.submitEvidence(projectId, EvidenceRegistry.Kind.DeliveryReceipt, h, "local://evidence/1");
@@ -126,6 +178,7 @@ contract EvidenceAndReportTest is Base {
         );
         uint256 id = _submit(HASH);
         assertEq(evidence.evidenceIdByHash(HASH), id);
+        assertEq(evidence.storageRefOf(id), "local://evidence/1");
         assertEq(evidence.submittedCount(projectId), 1);
 
         vm.prank(verifier);
@@ -206,6 +259,9 @@ contract EvidenceAndReportTest is Base {
 
         assertEq(reports.reportCount(projectId), 2);
         assertEq(reports.reportAt(projectId, 0).reportHash, r1);
+        assertEq(reports.reportUri(projectId, 0), "local://report/1");
+        assertEq(reports.reportUri(projectId, 1), "local://report/2");
+        assertEq(reports.reportAt(projectId, 0).publishedAt, block.timestamp);
         assertEq(reports.latestReport(projectId).version, 2);
     }
 

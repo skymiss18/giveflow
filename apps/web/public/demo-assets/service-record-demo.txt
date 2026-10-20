@@ -1,0 +1,15 @@
+GIVEFLOW TEST DEMONSTRATION - SIMULATED DOCUMENT
+DOCUMENT TYPE: Programme service record
+REFERENCE: DEMO-SVC-2026-014
+SESSION DATE: 20 October 2026
+PROGRAMME: Harbourlight Community Learning Fund - After-school learning kits
+LOCATION: Singapore (demonstration only)
+
+Aggregate activity:
+- Learning-kit sets prepared: 20
+- Reading-light units distributed: 10
+- Follow-up study sessions scheduled: 4
+- Beneficiary names or contact details: Not collected in this demonstration record
+
+Outcome note: Materials were allocated for supervised after-school study sessions.
+This is fictional, aggregated test content. It does not describe real people or services.

@@ -345,7 +345,6 @@ async function main() {
   await send(R.signer1, { ...t, functionName: "execute", args: [1n] });
 
   step("Charity publishes the first impact report");
-  await fetch(`${APP}/api/sync`, { method: "POST" });
   const prep = await fetch(`${APP}/api/reports/prepare`, {
     method: "POST",
     headers: { "content-type": "application/json", ...(await authHeaders(R.charity, "report:prepare")) },
@@ -354,10 +353,8 @@ async function main() {
   const report = await prep.json();
   if (!prep.ok) throw new Error(`report: ${report.error}`);
   await send(R.charity, { ...c.reports, functionName: "publishReport", args: [1n, report.reportHash, report.uri] });
-  await fetch(`${APP}/api/sync`, { method: "POST" });
 
   await seedMoreCauses(step);
-  await fetch(`${APP}/api/sync`, { method: "POST" });
 
   console.log(`\nSeeded. Treasury ${treasury}. Open ${APP}/projects`);
   if (!LOCAL) console.log("Role wallet keys: apps/web/.data/demo-wallets.json (import into MetaMask to act as a role).");

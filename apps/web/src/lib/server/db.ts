@@ -14,23 +14,6 @@ CREATE TABLE IF NOT EXISTS metadata (
   data TEXT NOT NULL,
   created_at INTEGER NOT NULL
 );
-CREATE TABLE IF NOT EXISTS events (
-  id TEXT PRIMARY KEY,
-  chain_id INTEGER NOT NULL,
-  block_number INTEGER NOT NULL,
-  log_index INTEGER NOT NULL,
-  tx_hash TEXT NOT NULL,
-  address TEXT NOT NULL,
-  name TEXT NOT NULL,
-  args TEXT NOT NULL,
-  timestamp INTEGER NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_events_name ON events (chain_id, name, block_number, log_index);
-CREATE TABLE IF NOT EXISTS sync_state (
-  chain_id INTEGER PRIMARY KEY,
-  last_block INTEGER NOT NULL,
-  fingerprint TEXT NOT NULL
-);
 CREATE TABLE IF NOT EXISTS evidence_files (
   content_hash TEXT PRIMARY KEY,
   project_id TEXT NOT NULL,

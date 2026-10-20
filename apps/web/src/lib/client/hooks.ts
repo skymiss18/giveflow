@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import type { Abi } from "viem";
 import { useConnection, usePublicClient, useSignMessage, useWriteContract } from "wagmi";
-import { apiPost } from "@/lib/client/api";
 import { friendlyError } from "@/lib/client/errors";
 import { gasLimitWithHeadroom } from "@/lib/client/gas";
 import { useI18n } from "@/lib/i18n/context";
@@ -16,7 +15,7 @@ export type TxState = { status: "idle" | "signing" | "pending" | "success" | "er
 
 type WriteRequest = { address: Hex; abi: Abi | readonly unknown[]; functionName: string; args?: readonly unknown[] };
 
-/** Simulates first so reverts surface as readable errors, then sends, waits, and refreshes the index. */
+/** Simulates first so reverts surface as readable errors, then sends, waits, and refreshes queries. */
 export function useTx() {
   const { t } = useI18n();
   const { address } = useConnection();
@@ -40,7 +39,6 @@ export function useTx() {
         setState({ status: "pending", hash });
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
         if (receipt.status !== "success") throw new Error("Transaction reverted on-chain");
-        await apiPost("/api/sync", {}).catch(() => undefined);
         await qc.invalidateQueries();
         setState({ status: "success", hash });
         return receipt;
@@ -58,7 +56,6 @@ export function useTx() {
     try {
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       if (receipt.status !== "success") throw new Error("Transaction reverted on-chain");
-      await apiPost("/api/sync", {}).catch(() => undefined);
       await qc.invalidateQueries();
       setState({ status: "success", hash });
       return receipt;

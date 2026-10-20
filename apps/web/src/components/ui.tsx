@@ -147,7 +147,8 @@ export function Copyable({ value, short }: { value: string; short?: string }) {
 export const AddressText = ({ value }: { value: string }) => <Copyable value={value} short={shortAddress(value)} />;
 export const HashText = ({ value }: { value: string }) => <Copyable value={value} short={shortHash(value)} />;
 
-export function TxLink({ hash, label }: { hash: string; label?: string }) {
+export function TxLink({ hash, label }: { hash: string | null; label?: string }) {
+  if (!hash) return null;
   const base = explorerBase(CHAIN_ID);
   if (!base) return <HashText value={hash} />;
   return (

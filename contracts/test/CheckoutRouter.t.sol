@@ -25,6 +25,9 @@ contract CheckoutRouterTest is Base {
         bytes32 paymentId = _buy(cid, 1, order);
 
         assertEq(paymentId, expectedId);
+        assertEq(router.paymentCount(), 1);
+        assertEq(router.paymentIdAt(0), paymentId);
+        assertEq(router.getPayment(paymentId).createdAt, block.timestamp);
         assertEq(usdc.balanceOf(address(treasury)), FIXED);
         assertEq(usdc.balanceOf(platform), 0.5e6);
         assertEq(usdc.balanceOf(merchantReceiver), 23.5e6);
@@ -85,6 +88,16 @@ contract CheckoutRouterTest is Base {
     function test_revert_duplicateOrder() public {
         _buy(cid, 1, keccak256("dup"));
         _buyReverts(cid, 1, keccak256("dup"), CheckoutRouter.OrderAlreadyUsed.selector);
+        assertEq(router.paymentCount(), 1);
+    }
+
+    function test_failedTransferDoesNotEnumeratePayment() public {
+        vm.prank(buyer);
+        usdc.approve(address(router), 0);
+        vm.prank(buyer);
+        vm.expectRevert();
+        router.checkout(PRODUCT, cid, 1, address(usdc), keccak256("failed"), PRICE, uint64(block.timestamp + 1));
+        assertEq(router.paymentCount(), 0);
     }
 
     function test_sameOrderHashDifferentBuyersAllowed() public {
@@ -174,6 +187,9 @@ contract CheckoutRouterTest is Base {
         vm.prank(buyer);
         router.refund(first, "changed-mind");
         _buy(id, 1, keccak256("3"));
+        assertEq(router.paymentCount(), 2);
+        assertEq(router.paymentIdAt(0), first);
+        assertEq(uint8(router.getPayment(first).status), uint8(CheckoutRouter.PaymentStatus.Refunded));
         assertEq(router.committedDonation(id), 1e6);
     }
 

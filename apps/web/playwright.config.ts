@@ -22,6 +22,7 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_CHAIN_ID: "31337",
       NEXT_PUBLIC_RPC_URL: "http://127.0.0.1:8546",
+      RPC_URL: "http://127.0.0.1:8546",
       NEXT_PUBLIC_DEV_WALLETS: "1",
       GIVEFLOW_E2E_WALLET: "1",
       NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: "giveflow-local-e2e",

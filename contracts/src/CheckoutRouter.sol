@@ -46,6 +46,7 @@ contract CheckoutRouter is Ownable2Step, ReentrancyGuard {
         uint256 donation;
         uint256 fee;
         bytes32 orderHash;
+        uint64 createdAt;
     }
 
     struct Order {
@@ -75,6 +76,7 @@ contract CheckoutRouter is Ownable2Step, ReentrancyGuard {
 
     address public platformReceiver;
     mapping(bytes32 => Payment) private _payments;
+    bytes32[] private _paymentIds;
     mapping(uint256 => uint256) public committedDonation;
 
     event PurchaseCompleted(
@@ -190,6 +192,14 @@ contract CheckoutRouter is Ownable2Step, ReentrancyGuard {
         return _payments[paymentId];
     }
 
+    function paymentCount() external view returns (uint256) {
+        return _paymentIds.length;
+    }
+
+    function paymentIdAt(uint256 index) external view returns (bytes32) {
+        return _paymentIds[index];
+    }
+
     function quote(uint256 campaignId, uint32 quantity)
         external
         view
@@ -256,6 +266,7 @@ contract CheckoutRouter is Ownable2Step, ReentrancyGuard {
         }
         committedDonation[o.campaignId] += donation;
 
+        _paymentIds.push(paymentId);
         _payments[paymentId] = Payment({
             campaignId: o.campaignId,
             buyer: buyer,
@@ -265,7 +276,8 @@ contract CheckoutRouter is Ownable2Step, ReentrancyGuard {
             gross: gross,
             donation: donation,
             fee: fee,
-            orderHash: o.orderHash
+            orderHash: o.orderHash,
+            createdAt: uint64(block.timestamp)
         });
     }
 

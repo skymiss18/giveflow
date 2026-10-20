@@ -17,6 +17,7 @@ contract ImpactReportRegistry is AccessControl {
     EvidenceRegistry public immutable evidence;
 
     mapping(uint256 => Report[]) private _reports;
+    mapping(uint256 => mapping(uint256 => string)) public reportUri;
 
     event ImpactReportPublished(uint256 indexed projectId, bytes32 reportHash, uint32 version, string uri);
 
@@ -40,6 +41,7 @@ contract ImpactReportRegistry is AccessControl {
 
         Report[] storage list = _reports[projectId];
         version = uint32(list.length + 1);
+        reportUri[projectId][list.length] = uri;
         list.push(Report(reportHash, version, uint64(block.timestamp), msg.sender));
         emit ImpactReportPublished(projectId, reportHash, version, uri);
     }

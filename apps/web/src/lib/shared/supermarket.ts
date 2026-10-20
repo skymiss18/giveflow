@@ -2,13 +2,9 @@ import type { CampaignView, OrderView } from "./types";
 
 export const MAX_ITEMS = 100;
 
-export const STORE_TABS = ["Supermarket", "Mall"] as const;
-export type StoreKey = (typeof STORE_TABS)[number];
-
-export const STORES: Record<StoreKey, { name: string; till: string }> = {
+export const STORES = {
   Supermarket: { name: "GiveFlow Fresh Supermarket", till: "Lane 3" },
-  Mall: { name: "GiveFlow City Mall", till: "Counter 12" },
-};
+} as const;
 
 export function clampQuantity(value: unknown): number {
   const quantity = Math.trunc(Number(value));
